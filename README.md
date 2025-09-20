@@ -5,8 +5,8 @@
 [![Fedora CoreOS](https://img.shields.io/badge/Fedora%20CoreOS-Immutable%20OS-51A2DA?style=for-the-badge&logo=fedora&logoColor=white)](https://getfedora.org/coreos/)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-Alpha-orange.svg)](https://github.com/yourusername/ansible-cockpit/releases)
-[![Distributed Infrastructure](https://img.shields.io/badge/Infrastructure-Distributed-blue.svg)](https://github.com/yourusername/ansible-cockpit)
+[![GitHub release](https://img.shields.io/github/release/Astocanthus/ansible-cockpit.svg)](https://github.com/Astocanthus/ansible-cockpit/releases)
+[![GitHub issues](https://img.shields.io/github/issues/Astocanthus/ansible-cockpit.svg)](https://github.com/Astocanthus/ansible-cockpit/issues)
 ![Status](https://img.shields.io/badge/Status-Development-red?logo=github)
 
 > ⚠️ **Alpha Version**: This project is in active development and designed for distributed infrastructure environments. Features may change and should be tested thoroughly before production use.
@@ -26,10 +26,10 @@ Ansible Cockpit leverages **Quadlet** (systemd container management) and systemd
 ## Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Git Repository│    │  Ansible Cockpit │    │   Target System │
-│   (Playbooks)   │────▶│   Controller     │────▶│   (localhost)   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
+┌─────────────────┐      ┌──────────────────┐     ┌───────────────────┐
+│   Git Repository│      │  Ansible Cockpit │     │   Target System   │
+│   (Playbooks)   │────▶│   Controller     │────▶│   (localhost)     │
+└─────────────────┘      └──────────────────┘     └───────────────────┘
                               │
                               ▼
                        ┌──────────────────┐
@@ -72,67 +72,67 @@ Start → Check Repository → Execute Playbook → Save State → Reboot? → R
 ## Component Interaction
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
+┌────────────────────────────────────────────────────────────────────┐
 │                        systemd Services                            │
-├─────────────────────────────────────────────────────────────────────┤
+├────────────────────────────────────────────────────────────────────┤
 │  ansible-cockpit.service                                           │
 │  ├── Before boot completion                                        │
 │  ├── Checks for pending execution                                  │
 │  └── Launches ansible-pull with state tracking                     │
-├─────────────────────────────────────────────────────────────────────┤
+├────────────────────────────────────────────────────────────────────┤
 │  ansible-cockpit-monitor.timer                                     │
 │  ├── Periodic repository checks                                    │
 │  └── Triggers execution on changes                                 │
-└─────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Quadlet Container                              │
-├─────────────────────────────────────────────────────────────────────┤
+┌────────────────────────────────────────────────────────────────────┐
+│                      Quadlet Container                             │
+├────────────────────────────────────────────────────────────────────┤
 │  • Isolated ansible-pull execution environment                     │
 │  • Mounts state directory from host                                │
 │  • Network access for git repository                               │
 │  • Manages ansible dependencies                                    │
-└─────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    State Management                                 │
-├─────────────────────────────────────────────────────────────────────┤
+┌────────────────────────────────────────────────────────────────────┐
+│                    State Management                                │
+├────────────────────────────────────────────────────────────────────┤
 │  /var/lib/ansible-cockpit/                                         │
 │  ├── state.json          (current execution state)                 │
 │  ├── progress.log        (detailed execution log)                  │
 │  ├── last_commit.txt     (repository version tracking)             │
 │  └── execution_lock      (prevents concurrent runs)                │
-└─────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────┘
 ```
 
 ## State Transition Diagram
 
 ```
-                    ┌─────────────┐
-                    │   INITIAL   │
-                    └──────┬──────┘
+                     ┌─────────────┐
+                     │   INITIAL   │
+                     └──────┬──────┘
                            │
                            ▼
-                    ┌─────────────┐
-              ┌────▶│   RUNNING   │◀────┐
-              │     └──────┬──────┘     │
-              │            │            │
-              │            ▼            │
-    ┌─────────┴──┐  ┌─────────────┐     │
-    │  RESUMING  │  │REBOOT_PENDING│     │
-    └─────────┬──┘  └──────┬──────┘     │
-              │            │            │
-              │            ▼            │
-              │     ┌─────────────┐     │
-              └─────┤   REBOOTING │─────┘
-                    └─────────────┘
+                     ┌─────────────┐
+              ┌────▶│    RUNNING   │
+              │      └──────┬──────┘     
+              │            │            
+              │            ▼            
+    ┌─────────┴──┐  ┌──────────────┐    
+    │  RESUMING  │  │REBOOT_PENDING│    
+    └─────────┬──┘  └──────┬───────┘    
+              │            │            
+              │            ▼            
+              │     ┌──────────────┐     
+              └─────┤   REBOOTING  │
+                    └──────────────┘
                            │
                            ▼
-                    ┌─────────────┐
-                    │  COMPLETED  │
-                    └─────────────┘
+                    ┌──────────────┐
+                    │   COMPLETED  │
+                    └──────────────┘
 ```
 
 ## Boot Sequence Integration
@@ -149,10 +149,10 @@ System Boot
 ┌─────────────────────────────────────────────────────────┐
 │             ansible-cockpit.service                     │
 │ ┌─────────────────────────────────────────────────────┐ │
-│ │ 1. Check /var/lib/ansible-cockpit/state.json       │ │
-│ │ 2. If REBOOT_PENDING → Resume execution            │ │
-│ │ 3. If COMPLETED → Check for repository updates     │ │
-│ │ 4. If INITIAL → Start fresh execution              │ │
+│ │ 1. Check /var/lib/ansible-cockpit/state.json        │ │
+│ │ 2. If REBOOT_PENDING → Resume execution             │ │
+│ │ 3. If COMPLETED → Check for repository updates      │ │
+│ │ 4. If INITIAL → Start fresh execution               │ │
 │ └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
      │
@@ -167,42 +167,42 @@ System Boot
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    Package Installation Flow                           │
+│                     Package Installation Flow                           │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  Start Playbook                                                        │
+│  Start Playbook                                                         │
 │       │                                                                 │
 │       ▼                                                                 │
-│  ┌─────────────────┐     ┌──────────────────┐                         │
-│  │ Pre-reboot      │────▶│ Mark State:      │                         │
-│  │ Tasks           │     │ "REBOOT_PENDING" │                         │
-│  │ (repo clone,    │     │ Save progress    │                         │
-│  │  preparations)  │     └──────────────────┘                         │
-│  └─────────────────┘              │                                    │
-│                                   ▼                                    │
-│  ┌─────────────────┐     ┌──────────────────┐                         │
-│  │ Layer Packages  │────▶│ Trigger Reboot   │                         │
-│  │ (rpm-ostree)    │     │ systemctl reboot │                         │
-│  └─────────────────┘     └──────────────────┘                         │
-│                                   │                                    │
-│                                   ▼                                    │
-│                          ┌──────────────────┐                         │
-│                          │ System Reboots   │                         │
-│                          └──────────────────┘                         │
-│                                   │                                    │
-│                                   ▼                                    │
-│  ┌─────────────────┐     ┌──────────────────┐                         │
-│  │ Boot Complete   │────▶│ ansible-cockpit  │                         │
-│  │ New OS Layer    │     │ detects PENDING  │                         │
-│  │ Active          │     │ state            │                         │
-│  └─────────────────┘     └──────────────────┘                         │
-│                                   │                                    │
-│                                   ▼                                    │
-│  ┌─────────────────┐     ┌──────────────────┐                         │
-│  │ Resume          │────▶│ Mark State:      │                         │
-│  │ Post-reboot     │     │ "COMPLETED"      │                         │
-│  │ Tasks           │     │                  │                         │
-│  └─────────────────┘     └──────────────────┘                         │
+│  ┌─────────────────┐     ┌──────────────────┐                           │
+│  │ Pre-reboot      │───▶│ Mark State:       │                          │
+│  │ Tasks           │     │ "REBOOT_PENDING" │                           │
+│  │ (repo clone,    │     │ Save progress    │                           │
+│  │  preparations)  │     └──────────────────┘                           │
+│  └─────────────────┘              │                                     │
+│                                   ▼                                     │
+│  ┌─────────────────┐     ┌──────────────────┐                           │
+│  │ Layer Packages  │───▶│ Trigger Reboot    │                          │
+│  │ (rpm-ostree)    │     │ systemctl reboot │                           │
+│  └─────────────────┘     └──────────────────┘                           │
+│                                   │                                     │
+│                                   ▼                                     │
+│                          ┌──────────────────┐                           │
+│                          │  System Reboots  │                           │
+│                          └──────────────────┘                           │
+│                                   │                                     │
+│                                   ▼                                     │
+│  ┌─────────────────┐     ┌──────────────────┐                           │
+│  │ Boot Complete   │───▶│ ansible-cockpit   │                          │
+│  │ New OS Layer    │     │ detects PENDING  │                           │
+│  │ Active          │     │ state            │                           │
+│  └─────────────────┘     └──────────────────┘                           │
+│                                   │                                     │
+│                                   ▼                                     │
+│  ┌─────────────────┐     ┌──────────────────┐                           │
+│  │ Resume          │───▶│ Mark State:       │                          │
+│  │ Post-reboot     │     │ "COMPLETED"      │                           │
+│  │ Tasks           │     │                  │                           │
+│  └─────────────────┘     └──────────────────┘                           │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
